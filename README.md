@@ -4,6 +4,7 @@ A new Flutter project.
 
 ## build status
 [![CI](https://github.com/hot33331/flutter_example/actions/workflows/ci.yml/badge.svg)](https://github.com/hot33331/flutter_example/actions/workflows/ci.yml)
+[![Codemagic build status](https://api.codemagic.io/apps/6244407661477832037e15ad/6244407661477832037e15ac/status_badge.svg)](https://codemagic.io/apps/6244407661477832037e15ad/6244407661477832037e15ac/latest_build)
 
 ## Getting Started
 
