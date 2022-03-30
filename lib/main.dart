@@ -99,7 +99,7 @@ class _MyHomePageState extends State<MyHomePage> {
               'You have pushed the button this many times:',style: TextStyle(fontFamily: 'Bakbak One',fontSize: 50),
             ),
             Text(
-              '$_counter',style: TextStyle(fontFamily: 'Bakbak One',fontSize: 50),
+              '$_counter',style: const TextStyle(fontFamily: 'Bakbak One',fontSize: 50),
             ),
           ],
         ),
