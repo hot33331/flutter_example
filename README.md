@@ -2,6 +2,9 @@
 
 A new Flutter project.
 
+## build status
+[![CI](https://github.com/hot33331/flutter_example/actions/workflows/ci.yml/badge.svg)](https://github.com/hot33331/flutter_example/actions/workflows/ci.yml)
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.
