@@ -4,9 +4,27 @@
 
 import 'package:flutter/material.dart';
 import 'package:english_words/english_words.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
-void main() {
-  runApp(const MyApp());
+Future<void> main() async {
+  await SentryFlutter.init(
+    (options) {
+      options.dsn =
+          'https://35ffa3363267450490ad250d7c51288a@o1153719.ingest.sentry.io/6322548';
+      // Set tracesSampleRate to 1.0 to capture 100% of transactions for performance monitoring.
+      // We recommend adjusting this value in production.
+      options.tracesSampleRate = 1.0;
+    },
+    // Init your App.
+    appRunner: () => runApp(
+      DefaultAssetBundle(
+        bundle: SentryAssetBundle(enableStructuredDataTracing: true),
+        child: MyApp(),
+      ),
+    ),
+  );
+
+  // or define SENTRY_DSN via Dart environment variable (--dart-define)
 }
 
 class MyApp extends StatelessWidget {
@@ -14,7 +32,10 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
+      navigatorObservers: [
+        SentryNavigatorObserver(),
+      ],
       title: 'Startup Name Generator',
       home: RandomWords(),
     );
@@ -70,11 +91,12 @@ class _RandomWordsState extends State<RandomWords> {
               semanticLabel: alreadySaved ? 'Remove from saved' : 'Save',
             ),
             onTap: () {
-              setState(() {
+              setState(() async {
                 if (alreadySaved) {
                   _saved.remove(_suggestions[index]);
                 } else {
                   _saved.add(_suggestions[index]);
+                  await Sentry.captureMessage('Hello');
                 }
               });
             },
