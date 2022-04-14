@@ -59,6 +59,7 @@ class _RandomWordsState extends State<RandomWords> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Startup Name Generator'),
+        backgroundColor: Colors.amber,
         actions: [
           IconButton(
             onPressed: _pushSaved,
@@ -81,6 +82,7 @@ class _RandomWordsState extends State<RandomWords> {
           final alreadySaved = _saved.contains(_suggestions[index]);
 
           return ListTile(
+            tileColor: Colors.amberAccent,
             title: Text(
               _suggestions[index].asPascalCase,
               style: _biggerFont,
