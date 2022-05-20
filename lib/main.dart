@@ -1,142 +1,126 @@
-// Copyright 2018 The Flutter team. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+import 'dart:async';
+import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:english_words/english_words.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:crypto/crypto.dart';
+import 'package:http/http.dart' as http;
 
-Future<void> main() async {
-  await SentryFlutter.init(
-    (options) {
-      options.dsn =
-          'https://35ffa3363267450490ad250d7c51288a@o1153719.ingest.sentry.io/6322548';
-      // Set tracesSampleRate to 1.0 to capture 100% of transactions for performance monitoring.
-      // We recommend adjusting this value in production.
-      options.tracesSampleRate = 1.0;
-    },
-    // Init your App.
-    appRunner: () => runApp(
-      DefaultAssetBundle(
-        bundle: SentryAssetBundle(enableStructuredDataTracing: true),
-        child: MyApp(),
-      ),
-    ),
-  );
+Future<List<MarvelCharacter>> fetchPhotos(http.Client client) async {
+  String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+  String apikey='8b399c3e03be559f8a36829c14029244';
+  String privKey='1a2cc2e362c7731efe3bd5a48d333389611bacf4';
+  String value = timestamp+ privKey+apikey;
+  String hash= md5.convert(utf8.encode(value)).toString();
 
-  // or define SENTRY_DSN via Dart environment variable (--dart-define)
+
+
+  final response = await client
+      .get(Uri.parse('https://gateway.marvel.com:443/v1/public/characters?limit=10&apikey=$apikey&ts=$timestamp&hash=$hash'));
+
+  // Use the compute function to run parsePhotos in a separate isolate.
+  return compute(parseCharacters, response.body);
 }
+
+// A function that converts a response body into a List<Photo>.
+List<MarvelCharacter> parseCharacters(String responseBody) {
+  final parsed = jsonDecode(responseBody).cast<Map<String, dynamic>>();
+
+  return parsed.map<MarvelCharacter>((json) => MarvelCharacter.fromJson(json)).toList();
+}
+class Thumbnail{
+  final String path;
+  final String extension;
+
+  const Thumbnail({
+    required this.path,
+    required this.extension
+});
+}
+
+
+class MarvelCharacter {
+  final int id;
+  final String name;
+  final Thumbnail thumbnail;
+
+  const MarvelCharacter({
+    required this.id,
+    required this.name,
+   required this.thumbnail
+  });
+
+  factory MarvelCharacter.fromJson(Map<String, dynamic> json) {
+    return MarvelCharacter(
+      id: json['id'] as int,
+      name: json['title'] as String,
+      thumbnail: json['thumbnail'] as Thumbnail
+    );
+  }
+}
+
+void main() => runApp(const MyApp());
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      navigatorObservers: [
-        SentryNavigatorObserver(),
-      ],
-      title: 'Startup Name Generator',
-      home: RandomWords(),
+    const appTitle = 'Isolate Demo';
+
+    return const MaterialApp(
+      title: appTitle,
+      home: MyHomePage(title: appTitle),
     );
   }
 }
 
-class RandomWords extends StatefulWidget {
-  const RandomWords({Key? key}) : super(key: key);
+class MyHomePage extends StatelessWidget {
+  const MyHomePage({Key? key, required this.title}) : super(key: key);
 
-  @override
-  State<RandomWords> createState() => _RandomWordsState();
-}
-
-class _RandomWordsState extends State<RandomWords> {
-  final _suggestions = <WordPair>[];
-  final _saved = <WordPair>{};
-  final _biggerFont = const TextStyle(fontSize: 18.0);
+  final String title;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Startup Name Generator'),
-        backgroundColor: Colors.amber,
-        actions: [
-          IconButton(
-            onPressed: _pushSaved,
-            icon: const Icon(Icons.list),
-            tooltip: 'Saved Suggestions',
-          )
-        ],
+        title: Text(title),
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        itemBuilder: /*1*/ (context, i) {
-          if (i.isOdd) return const Divider();
-          /*2*/
-
-          final index = i ~/ 2; /*3*/
-          if (index >= _suggestions.length) {
-            _suggestions.addAll(generateWordPairs().take(10)); /*4*/
+      body: FutureBuilder<List<MarvelCharacter>>(
+        future: fetchPhotos(http.Client()),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return const Center(
+              child: Text('An error has occurred!'),
+            );
+          } else if (snapshot.hasData) {
+            return PhotosList(photos: snapshot.data!);
+          } else {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
           }
-
-          final alreadySaved = _saved.contains(_suggestions[index]);
-
-          return ListTile(
-            tileColor: Colors.amberAccent,
-            title: Text(
-              _suggestions[index].asPascalCase,
-              style: _biggerFont,
-            ),
-            trailing: Icon(
-              alreadySaved ? Icons.favorite : Icons.favorite_border,
-              color: alreadySaved ? Colors.red : null,
-              semanticLabel: alreadySaved ? 'Remove from saved' : 'Save',
-            ),
-            onTap: () {
-              setState(() async {
-                if (alreadySaved) {
-                  _saved.remove(_suggestions[index]);
-                } else {
-                  _saved.add(_suggestions[index]);
-                  await Sentry.captureMessage('Hello');
-                }
-              });
-            },
-          );
         },
       ),
     );
   }
+}
 
-  void _pushSaved() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) {
-          final tiles = _saved.map(
-            (pair) {
-              return ListTile(
-                title: Text(
-                  pair.asPascalCase,
-                  style: _biggerFont,
-                ),
-              );
-            },
-          );
-          final divided = tiles.isNotEmpty
-              ? ListTile.divideTiles(
-                  context: context,
-                  tiles: tiles,
-                ).toList()
-              : <Widget>[];
+class PhotosList extends StatelessWidget {
+  const PhotosList({Key? key, required this.photos}) : super(key: key);
 
-          return Scaffold(
-            appBar: AppBar(
-              title: const Text('Saved Suggestions'),
-            ),
-            body: ListView(children: divided),
-          );
-        },
+  final List<MarvelCharacter> photos;
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
       ),
+      itemCount: photos.length,
+      itemBuilder: (context, index) {
+        return Image.network(photos[index].thumbnail.path+'.'+photos[index].thumbnail.extension);
+      },
     );
   }
 }
