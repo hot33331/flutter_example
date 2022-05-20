@@ -98,7 +98,6 @@ class _RandomWordsState extends State<RandomWords> {
                   _saved.remove(_suggestions[index]);
                 } else {
                   _saved.add(_suggestions[index]);
-                  await Sentry.captureMessage('Hello');
                 }
               });
             },
